@@ -1,0 +1,54 @@
+version: '3'
+
+
+services:
+#  db:
+#    build:
+#      context: ./docker/postgres
+#      dockerfile: Dockerfile
+#    env_file:
+#      - ./.env.db
+#    volumes:
+#      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+#    restart: no
+#    ports:
+#      - '5432:5432'
+
+  redis:
+    image: redis
+    ports:
+      - '6379:6379'
+
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    volumes:
+      - ./:/usr/src/app
+    depends_on:
+#      - db
+      - redis
+    ports:
+      - '8000:8000'
+    restart: 'no'
+
+  celery-beat:
+    build: .
+    entrypoint: celery -A config beat -l debug
+
+  celery:
+    build: .
+    entrypoint: celery -A config worker -l INFO --pool=solo
+
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    depends_on:
+      - app
+#      - db
+    restart: 'no'
+    ports:
+      - '80:80'
